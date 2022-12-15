@@ -80,14 +80,15 @@ async function validateNonce(chainType, address, nonce) {
   if (exist !== undefined) {
     expected = exist;
   } else {
-    let iWanChainType = ChainTypeMapping.get(chainType) || chainType;
-    try {
-      let chainNonce = await tool.iwan.getTransCount(iWanChainType, {address});
-      // console.log("chain %s address %s chain nonce: %s", iWanChainType, address, chainNonce)
-      expected = Number(chainNonce);
-    } catch (err) {
-      report("detail", "get chain %s %s nonce error: %s", chainType, address, err);
-    }
+    expected = Number(nonce);
+    // let iWanChainType = ChainTypeMapping.get(chainType) || chainType;
+    // try {
+    //   let chainNonce = await tool.iwan.getTransCount(iWanChainType, {address});
+    //   console.log("chain %s address %s chain nonce: %s", iWanChainType, address, chainNonce)
+    //   expected = Number(chainNonce);
+    // } catch (err) {
+    //   report("detail", "get chain %s %s nonce error: %s", chainType, address, err);
+    // }
   }
   if (Number(nonce) !== expected) {
     report("warn", "invalid chain %s %s nonce: %s, expected", chainType, address, nonce, expected);
