@@ -1,0 +1,23 @@
+{
+  "name": "offline-tx-validator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhwir/offline-tx-validator.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zhwir/offline-tx-validator/issues"
+  },
+  "homepage": "https://github.com/zhwir/offline-tx-validator#readme",
+  "dependencies": {
+    "iwan-sdk": "git+https://github.com/wanchain/iwan-js-sdk.git#feature-btc-cross",
+    "web3": "1.5.3"
+  }
+}
