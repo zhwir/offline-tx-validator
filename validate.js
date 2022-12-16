@@ -69,7 +69,7 @@ async function validate() {
         report("warn", "need manually validate %s tx", tx.abi.name);
       }
       if (!TxReportCache) {
-        console.log("Pass");
+        console.log("\x1B[42m%s\x1B[0m", "Pass");
       }
     } catch (err) {
       // do nothing
@@ -201,7 +201,7 @@ function report(type, ...msg) {
   let text = util.format(...msg);
   if (type === "error") {
     console.log("\x1B[41m%s\x1B[0m", text);
-    throw new Error("error");
+    throw new Error(text);
   } else if (type === "detail") {
     console.log("\x1B[41m%s\x1B[0m", text);
   } else if (type === "warn") {
