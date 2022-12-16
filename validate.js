@@ -1,71 +1,79 @@
+const util = require("util");
 const tool = require("./tool.js");
 const chains = require("./chains");
 const Web3 = require("web3");
 const ownerAbi = require('./abis/owner');
 
-const report = tool.report;
 const web3 = new Web3();
 
 const inputFile = process.argv[2];
 const txs = require(inputFile);
 
-let TrxRefBlockInfo = null;
+let TrxRefBlockCache = null;
 const TokenPairMap = new Map();
 const TokenInfoCache = new Set();
 const AddressNonceCache = new Map();
+let TxReportCache = false;
 
 const ChainTypeMapping = new Map([
   ["BSC", "BNB"]
 ])
 
-report("log", "total %d txs from file %s", txs.length, inputFile);
+console.log("total %d txs from file %s", txs.length, inputFile);
 
 validate();
 
 async function validate() {
   for (let i = 0; i < txs.length; i++) {
     let tx = txs[i];
-    report("log", "(%d) %s tx: %s", i, tx.chain, tx.topic);
-    // check chain
-    let chainInfo = chains[tx.chain];
-    if (!chainInfo) {
-      report("error", "invalid chain: %s", tx.chain);
-    }
-    // check chainId (walletId)
-    if ((chainInfo.walletId !== "no") && (tx.chainId != chainInfo.walletId)) {
-      report("error", "invalid chainId: %s, expected %s", tx.chainId, chainInfo.walletId);
-    }
-    // check from
-    if (!tool.compAddress(tx.from, chainInfo.admin)) {
-      report("error", "invalid from: %s, expected %s", tx.from, chainInfo.admin);
-    }
-    // check nonce
-    await validateNonce(tx.chain, tx.from, tx.nonce);
-    // check gas
-    if (chainInfo.gasPrice) {
-      if (Number(tx.gasPrice) < chainInfo.gasPrice) {
-        report("error", "invalid gasLimit: %s, at least %s", tx.gasPrice, chainInfo.gasPrice);
+    console.log("(%d) %s tx: %s", i, tx.chain, tx.topic);
+    TxReportCache = false;
+    try {
+      // check chain
+      let chainInfo = chains[tx.chain];
+      if (!chainInfo) {
+        report("error", "invalid chain: %s", tx.chain);
       }
-      if (Number(tx.gasLimit) < chainInfo.gasLimit) {
-        report("error", "invalid gasLimit: %s, at least %s", tx.gasLimit, chainInfo.gasLimit);
+      // check chainId (walletId)
+      if ((chainInfo.walletId !== "no") && (tx.chainId != chainInfo.walletId)) {
+        report("error", "invalid chainId: %s, expected %s", tx.chainId, chainInfo.walletId);
       }
-    } else if (chainInfo.feeLimit) {
-      if (Number(tx.feeLimit) < chainInfo.feeLimit) {
-        report("error", "invalid feeLimit: %s, at least %s", tx.feeLimit, chainInfo.feeLimit);
+      // check from
+      if (!tool.compAddress(tx.from, chainInfo.admin)) {
+        report("error", "invalid from: %s, expected %s", tx.from, chainInfo.admin);
       }
-      checkTrxRefBlock(tx.refBlock);
+      // check nonce
+      await validateNonce(tx.chain, tx.from, tx.nonce);
+      // check gas
+      if (chainInfo.gasPrice) {
+        if (Number(tx.gasPrice) < chainInfo.gasPrice) {
+          report("error", "invalid gasPrice: %s, at least %s", tx.gasPrice, chainInfo.gasPrice);
+        }
+        if (Number(tx.gasLimit) < chainInfo.gasLimit) {
+          report("error", "invalid gasLimit: %s, at least %s", tx.gasLimit, chainInfo.gasLimit);
+        }
+      } else if (tx.chain === "TRX") {
+        if (Number(tx.feeLimit) < chainInfo.feeLimit) {
+          report("error", "invalid feeLimit: %s, at least %s", tx.feeLimit, chainInfo.feeLimit);
+        }
+        checkTrxRefBlock(tx.refBlock);
+      }
+      // check abi
+      if (["addTokenPair", "updateTokenPair"].includes(tx.abi.name)) {
+        // check to
+        if (!tool.compAddress(tx.to, chainInfo.tokenManagerProxy)) {
+          report("error", "invalid to: %s, expected %s", tx.to, chainInfo.tokenManagerProxy);
+        }
+        await validateAddTokenPair(tx);
+      } else {
+        report("warn", "need manually validate %s tx", tx.abi.name);
+      }
+      if (!TxReportCache) {
+        console.log("Pass");
+      }
+    } catch (err) {
+      // do nothing
     }
-    // check abi
-    if (["addTokenPair", "updateTokenPair"].includes(tx.abi.name)) {
-      // check to
-      if (!tool.compAddress(tx.to, chainInfo.tokenManagerProxy)) {
-        report("error", "invalid to: %s, expected %s", tx.to, chainInfo.tokenManagerProxy);
-      }
-      await validateAddTokenPair(tx);
-    } else {
-      report("warn", "need manually validate this tx");
-    }
-    report("", "Pass");
   }
   tool.iwan.close();
 }
@@ -80,29 +88,24 @@ async function validateNonce(chainType, address, nonce) {
   if (exist !== undefined) {
     expected = exist;
   } else {
-    expected = Number(nonce);
-    // let iWanChainType = ChainTypeMapping.get(chainType) || chainType;
-    // try {
-    //   let chainNonce = await tool.iwan.getTransCount(iWanChainType, {address});
-    //   console.log("chain %s address %s chain nonce: %s", iWanChainType, address, chainNonce)
-    //   expected = Number(chainNonce);
-    // } catch (err) {
-    //   report("detail", "get chain %s %s nonce error: %s", chainType, address, err);
-    // }
+    let iWanChainType = ChainTypeMapping.get(chainType) || chainType;
+    let chainNonce = await tool.iwan.getNonce(iWanChainType, address);
+    // console.log("chain %s address %s chain nonce: %s", iWanChainType, address, chainNonce)
+    expected = Number(chainNonce);
   }
-  if (Number(nonce) !== expected) {
-    report("warn", "invalid chain %s %s nonce: %s, expected", chainType, address, nonce, expected);
+  if (Number(nonce) !== expected) { // maybe need reserve nonce, do not report error
+    report("detail", "invalid chain %s %s nonce: %s, expected %s", chainType, address, nonce, expected);
   }
   AddressNonceCache.set(key, Number(nonce) + 1);
 }
 
 function checkTrxRefBlock(rb) {
-  if (TrxRefBlockInfo) {
-    if ((TrxRefBlockInfo.number === rb.number) && (TrxRefBlockInfo.hash === rb.hash) && (TrxRefBlockInfo.timestamp === rb.timestamp)) {
+  if (TrxRefBlockCache) {
+    if ((TrxRefBlockCache.number === rb.number) && (TrxRefBlockCache.hash === rb.hash) && (TrxRefBlockCache.timestamp === rb.timestamp)) {
       report("error", "refBlock not match");
     }
   } else {
-    TrxRefBlockInfo = rb;
+    TrxRefBlockCache = rb;
   }
   let now = new Date().getTime();
   if ((now < rb.timestamp) || (now - rb.timestamp > 28800)) {
@@ -115,7 +118,7 @@ async function validateAddTokenPair(tx) {
   try {
     sc.methods[tx.abi.name](...tx.params).encodeABI();
   } catch (err) {
-    report("error", "encodeABI error: %O", err);
+    report("error", "invalid params, encodeABI error");
   }
   let id = tx.params[0];
   let exist = TokenPairMap.get(id);
@@ -131,25 +134,21 @@ async function validateAddTokenPair(tx) {
     if ((fromChainId === toChainId) || ((![fromChainId, toChainId].includes(selfChainId)) && (tx.chain !== "WAN"))) {
       report("error", "invalid fromChainId(%s) or toChainId(%s)", fromChainId, toChainId);
     }
-    let [aAccount, aSymbol, aName, aDecimals, aBip44Id] = ancestor;
-    let tokens = [];
-    tokens.push(await validateToken("ancestor", aBip44Id, aAccount, aSymbol, aDecimals));
-    tokens.push(await validateToken("fromAccount", fromChainId, fromAccount, aSymbol, aDecimals));
-    tokens.push(await validateToken("toAccount", toChainId, toAccount, aSymbol, aDecimals));
-    for (let i = 0; i < tokens.length; i++) {
-      if (!tokens[i]) {
-        return;
-      }
-    }
     TokenPairMap.set(id, tx.params);
+    let [aAccount, aSymbol, aName, aDecimals, aBip44Id] = ancestor;
+    // serial to prevent duplication
+    await validateToken("ancestor", aBip44Id, aAccount, aSymbol, aDecimals);
+    await validateToken("fromAccount", fromChainId, fromAccount, aSymbol, aDecimals);
+    await validateToken("toAccount", toChainId, toAccount, aSymbol, aDecimals);
   }
 }
 
 async function validateToken(name, chainId, tokenAddress, symbol, decimals) {
   let key = chainId + tokenAddress;
   if (TokenInfoCache.has(key)) {
-    return true;
+    return;
   }
+  TokenInfoCache.add(key);
   let chainType = null, chainInfo = null;
   for (let chain in chains) {
     let ci = chains[chain];
@@ -160,20 +159,18 @@ async function validateToken(name, chainId, tokenAddress, symbol, decimals) {
     }
   }
   if (!chainType) {
-    report("error", "validateToken(%s) invalid chainId: %s", name, chainId);
+    report("error", "%s validateToken invalid chainId: %s", name, chainId);
   }
   if (tokenAddress == 0) {
     if (name === "toAccount") {
-      report("detail", "invalid chain %s %s toAccount: %s", chainType, symbol, tokenAddress);
+      report("error", "invalid chain %s %s toAccount: %s", chainType, symbol, tokenAddress);
     }
-    TokenInfoCache.add(key);
-    return true; // coin
+    return; // coin
   }
   if (chainInfo.tokenManagerProxy === "no") {
     let token = tool.parseTokenPairAccount(chainType, tokenAddress);
     report("warn", "need manually validate %s token: %s", chainType, token.join("."));
-    TokenInfoCache.add(key);
-    return true;
+    return; // not evm
   }
   let iWanChainType = ChainTypeMapping.get(chainType) || chainType;
   let ti = await tool.validateToken(iWanChainType, tokenAddress);
@@ -191,13 +188,24 @@ async function validateToken(name, chainId, tokenAddress, symbol, decimals) {
     let expectedOwner = chainInfo.tokenManagerProxyEvm || chainInfo.tokenManagerProxy;
     try {
       let owner = await tool.iwan.callScFunc(iWanChainType, tokenAddress, "owner", [], ownerAbi);
-      if (!tool.compAddress(owner, expectedOwner)) {
-        report("warn", "chain %s %s token %s owner not match: %s, expected %s", chainType, symbol, tokenAddress, owner, expectedOwner);
+      if (!tool.compAddress(owner, expectedOwner)) { // maybe config origToken later
+        report("detail", "chain %s %s token %s owner not match: %s, expected %s", chainType, symbol, tokenAddress, owner, expectedOwner);
       }
-    } catch (err) {
-      report("warn", "chain %s %s token %s owner unknown, expected %s", chainType, symbol, tokenAddress, expectedOwner);
+    } catch (err) { // maybe node is temporarily unavailable
+      report("detail", "chain %s %s token %s owner unknown, expected %s", chainType, symbol, tokenAddress, expectedOwner);
     }
   }
-  TokenInfoCache.add(key);
-  return true;
+}
+
+function report(type, ...msg) {
+  let text = util.format(...msg);
+  if (type === "error") {
+    console.log("\x1B[41m%s\x1B[0m", text);
+    throw new Error("error");
+  } else if (type === "detail") {
+    console.log("\x1B[41m%s\x1B[0m", text);
+  } else if (type === "warn") {
+    console.log("\x1B[43m%s\x1B[0m", text);
+  }
+  TxReportCache = true;
 }

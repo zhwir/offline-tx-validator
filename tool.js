@@ -1,4 +1,3 @@
-const util = require("util");
 const erc20Abi = require('./abis/erc20');
 const erc721Abi = require('./abis/erc721');
 const erc1155Abi = require('./abis/erc1155');
@@ -44,20 +43,6 @@ function ascii2letter(asciiStr) {
       }
   }
   return letterStr.join('');
-}
-
-function report(type, ...msg) {
-  let text = util.format(...msg);
-  if (type === "error") {
-    console.log("\x1B[41m%s\x1B[0m", text);
-    throw new Error("error");
-  } else if (type === "detail") {
-    console.log("\x1B[41m%s\x1B[0m", text);
-  } else if (type === "warn") {
-    console.log("\x1B[43m%s\x1B[0m", text);
-  } else {
-    console.log("%s", text);
-  }
 }
 
 function xrpNormalizeCurrencyCode(currencyCode, maxLength = 20) {
@@ -191,7 +176,6 @@ async function validateWrc721(chainType, sc) {
 module.exports = {
   iwan,
   compAddress,
-  report,
   parseTokenPairAccount,
   validateToken
 }
