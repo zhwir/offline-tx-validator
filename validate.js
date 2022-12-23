@@ -56,7 +56,7 @@ async function validate() {
         if (Number(tx.feeLimit) < chainInfo.feeLimit) {
           report("error", "invalid feeLimit: %s, at least %s", tx.feeLimit, chainInfo.feeLimit);
         }
-        checkTrxRefBlock(tx.refBlock);
+        validateTrxRefBlock(tx.refBlock);
       }
       // check abi
       if (["addTokenPair", "updateTokenPair"].includes(tx.abi.name)) {
@@ -99,7 +99,7 @@ async function validateNonce(chainType, address, nonce) {
   AddressNonceCache.set(key, Number(nonce) + 1);
 }
 
-function checkTrxRefBlock(rb) {
+function validateTrxRefBlock(rb) {
   if (TrxRefBlockCache) {
     if ((TrxRefBlockCache.number === rb.number) && (TrxRefBlockCache.hash === rb.hash) && (TrxRefBlockCache.timestamp === rb.timestamp)) {
       report("error", "refBlock not match");
