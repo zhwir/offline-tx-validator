@@ -86,7 +86,7 @@ module.exports = {
     admin: "TPM7MaApxYUwVs63JpUo9o7mFFZpghKehJ", // 0x92BE12B2DC52598DFC97BDFE426F2648E541BB31
     tokenManagerProxy: "TQgd23LHoj1EkUdnZ5CCFKjt1QddwtiaXL",
     tokenManagerProxyEvm: "0xA166DD1D7BE6347F057B3F92D0E2FE901060BAF2",
-    feeLimit: 100,
+    feeLimit: 200,
     nonce: "no",
   },
   OKT: {
