@@ -86,7 +86,7 @@ module.exports = {
     admin: "TPM7MaApxYUwVs63JpUo9o7mFFZpghKehJ", // 0x92BE12B2DC52598DFC97BDFE426F2648E541BB31
     tokenManagerProxy: "TQgd23LHoj1EkUdnZ5CCFKjt1QddwtiaXL",
     tokenManagerProxyEvm: "0xA166DD1D7BE6347F057B3F92D0E2FE901060BAF2",
-    feeLimit: 50,
+    feeLimit: 100,
     nonce: "no",
   },
   OKT: {
@@ -94,7 +94,7 @@ module.exports = {
     walletId: 66,
     admin: "0x4cEd9c0EA79Ee6181600777D5B6badE7F3D301bF",
     tokenManagerProxy: "0xc928c8e48647c8b0ce550c2352087b1cf5c6111e",
-    gasPrice: 100000000,
+    gasPrice: 1500000000,
     gasLimit: 1000000,
   },
   CLV: {
