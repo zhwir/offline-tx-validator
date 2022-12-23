@@ -18,7 +18,7 @@ const iwanCfg = {
 const iwan = new iwanSdk(iwanCfg.apiKey, iwanCfg.secretKey, iwanCfg.options);
 
 function compAddress(a, b) {
-  return a.toLowerCase() === b.toLowerCase();
+  return a.toLowerCase().substr(-40) === b.toLowerCase().substr(-40);
 }
 
 function hexStrip0x(hex) {
@@ -102,33 +102,33 @@ function parseTokenPairAccount(chain, tokenAccount, normalizeCurrency = true) {
 }
 
 async function validateToken(chainType, sc) {
-  try { // validate wrc20 and wrc721
+  try { // validate Erc20 and Erc721
     let [name, symbol] = await Promise.all([
       iwan.callScFunc(chainType, sc, "name", [], erc20Abi),
       iwan.callScFunc(chainType, sc, "symbol", [], erc20Abi),
       iwan.callScFunc(chainType, sc, "balanceOf", [sc], erc20Abi)
     ]);
-    // continue to check wrc20 and wrc721
+    // continue to check Erc20 and Erc721
     let [erc20Info, erc721Info] = await Promise.all([
-      validateWrc20(chainType, sc),
-      validateWrc721(chainType, sc)
+      validateErc20(chainType, sc),
+      validateErc721(chainType, sc)
     ]);
     if (erc20Info) {
-      return {name, symbol, type: 'erc20', decimals: erc20Info.decimals};
+      return {name, symbol, type: 'Erc20', decimals: erc20Info.decimals};
     } else if (erc721Info) {
-      return {name, symbol, type: 'erc721', decimals: 0};
+      return {name, symbol, type: 'Erc721', decimals: 0};
     }
   } catch (err) {
     // do nothing
   }
 
-  try { // validate erc1155
+  try { // validate Erc1155
     let [supportErc1155, ] = await Promise.all([
       iwan.callScFunc(chainType, sc, "supportsInterface", ["0xd9b67a26"], erc1155Abi),
       iwan.callScFunc(chainType, sc, "balanceOf", [sc, 0], erc1155Abi)
     ]);
     if (supportErc1155) {
-      let name = "ERC1155 token", symbol = "ERC1155"; // name and symbol is not standard interface for wrc1155 but neccessary for wanscan
+      let name = "Erc1155 token", symbol = ""; // name and symbol is not standard interface for Erc1155
       try {
         name = await iwan.callScFunc(chainType, sc, "name", [], erc20Abi);
       } catch (e) {
@@ -139,7 +139,7 @@ async function validateToken(chainType, sc) {
       } catch (e) {
         // do nothing, use default symbol
       }
-      return {name, symbol, type, decimals: 0};
+      return {name, symbol, type: 'Erc1155', decimals: 0};
     } else {
       return null;
     }
@@ -148,7 +148,7 @@ async function validateToken(chainType, sc) {
   }
 }
 
-async function validateWrc20(chainType, sc) {
+async function validateErc20(chainType, sc) {
   try {
     let [decimals, , ] = await Promise.all([
       iwan.callScFunc(chainType, sc, "decimals", [], erc20Abi),
@@ -161,7 +161,7 @@ async function validateWrc20(chainType, sc) {
   }
 }
 
-async function validateWrc721(chainType, sc) {
+async function validateErc721(chainType, sc) {
   try {
     await Promise.all([
       iwan.callScFunc(chainType, sc, "isApprovedForAll", [sc, sc], erc721Abi),

@@ -11,7 +11,7 @@ const txs = require(inputFile);
 
 let TrxRefBlockCache = null;
 const TokenPairMap = new Map();
-const TokenInfoCache = new Set();
+const TokenInfoCache = new Map();
 const AddressNonceCache = new Map();
 let TxReportCache = false;
 
@@ -137,18 +137,33 @@ async function validateAddTokenPair(tx) {
     TokenPairMap.set(id, tx.params);
     let [aAccount, aSymbol, aName, aDecimals, aBip44Id] = ancestor;
     // serial to prevent duplication
-    await validateToken("ancestor", aBip44Id, aAccount, aSymbol, aDecimals);
-    await validateToken("fromAccount", fromChainId, fromAccount, aSymbol, aDecimals);
-    await validateToken("toAccount", toChainId, toAccount, aSymbol, aDecimals);
+    let tis = [], type = "", decimals = undefined;
+    tis[0] = await validateToken("ancestor", aBip44Id, aBip44Id, aAccount, aSymbol, aDecimals);
+    tis[1] = await validateToken("fromAccount", aBip44Id, fromChainId, fromAccount, aSymbol, aDecimals);
+    tis[2] = await validateToken("toAccount", aBip44Id, toChainId, toAccount, aSymbol, aDecimals);
+    tis.forEach(ti => {
+      if (ti) {
+        if (type === "") {
+          type = ti.type;
+        } else if (type !== ti.type) {
+          report("detail", "tokenPair %s token type not match: %s, expected %s", id, ti.type, type);
+        }
+        if (decimals === undefined) {
+          decimals = ti.decimals;
+        } else if (decimals !== ti.decimals) { // maybe normal, only warn
+          report("warn", "tokenPair %s token decimals not match: %s, expected %s", id, ti.decimals, decimals);
+        }
+      }
+    })
   }
 }
 
-async function validateToken(name, chainId, tokenAddress, symbol, decimals) {
+async function validateToken(name, ancestorChainId, chainId, tokenAddress, symbol, decimals) {
   let key = chainId + tokenAddress;
-  if (TokenInfoCache.has(key)) {
-    return;
+  let exist = TokenInfoCache.get(key);
+  if (exist !== undefined) {
+    return exist;
   }
-  TokenInfoCache.add(key);
   let chainType = null, chainInfo = null;
   for (let chain in chains) {
     let ci = chains[chain];
@@ -159,40 +174,74 @@ async function validateToken(name, chainId, tokenAddress, symbol, decimals) {
     }
   }
   if (!chainType) {
-    report("error", "%s validateToken invalid chainId: %s", name, chainId);
+    report("detail", "%s validateToken invalid chainId: %s", name, chainId);
+    TokenInfoCache.set(key, null);
+    return null;
   }
   if (tokenAddress == 0) {
     if (name === "toAccount") {
-      report("error", "invalid chain %s %s toAccount: %s", chainType, symbol, tokenAddress);
+      report("detail", "invalid chain %s %s toAccount: %s", chainType, symbol, tokenAddress);
     }
-    return; // coin
+    TokenInfoCache.set(key, null);
+    return null; // coin
   }
   if (chainInfo.tokenManagerProxy === "no") {
     let token = tool.parseTokenPairAccount(chainType, tokenAddress);
-    report("warn", "need manually validate %s token: %s", chainType, token.join("."));
-    return; // not evm
+    let tokenAccount = token.join(".");
+    if (chainType === "XRP") {
+      report("warn", "need manually validate %s token: %s => %s", chainType, tokenAccount, "https://livenet.xrpl.org/token/" + tokenAccount);
+    } else {
+      report("warn", "need manually validate %s token: %s", chainType, chainType);
+    }
+    TokenInfoCache.set(key, null);
+    return null; // not evm
   }
   let iWanChainType = ChainTypeMapping.get(chainType) || chainType;
   let ti = await tool.validateToken(iWanChainType, tokenAddress);
   if (!ti) {
-    report("error", "invalid chain %s %s token: %s", chainType, symbol, tokenAddress);
+    report("detail", "invalid chain %s %s token: %s", chainType, symbol, tokenAddress);
+    TokenInfoCache.set(key, null);
+    return null;
   }
-  if (ti.type === "erc20") {
+  TokenInfoCache.set(key, ti);
+  // check symbol
+  if (ti.symbol) {
     if (!ti.symbol.includes(symbol)) {
       report("warn", "chain %s %s token %s symbol not match: %s, ancestor %s", chainType, symbol, tokenAddress, ti.symbol, symbol);
     }
   }
-  let origTokens = await tool.iwan.getRegisteredMultiChainOrigToken({chainType: iWanChainType});
-  // console.log("chain %s orig tokens: %O", iWanChainType, origTokens);
-  if (!origTokens.find(v => tool.compAddress(v.tokenScAddr, tokenAddress))) {
-    let expectedOwner = chainInfo.tokenManagerProxyEvm || chainInfo.tokenManagerProxy;
-    try {
-      let owner = await tool.iwan.callScFunc(iWanChainType, tokenAddress, "owner", [], ownerAbi);
-      if (!tool.compAddress(owner, expectedOwner)) { // maybe config origToken later
-        report("detail", "chain %s %s token %s owner not match: %s, expected %s", chainType, symbol, tokenAddress, owner, expectedOwner);
+  // check wrapped token owner
+  let isWrappedToken = true;
+  if (chainId == ancestorChainId) {
+    isWrappedToken = false;
+  } else {
+    let origTokens = await tool.iwan.getRegisteredMultiChainOrigToken({chainType: iWanChainType});
+    // console.log("chain %s orig tokens: %O", iWanChainType, origTokens);
+    if (origTokens.find(v => tool.compAddress(v.tokenScAddr, tokenAddress))) {
+      isWrappedToken = false;
+    }
+  }
+  if (isWrappedToken) {
+    let expected = chainInfo.tokenManagerProxyEvm || chainInfo.tokenManagerProxy;
+    if (ti.type === "Erc20") {
+      try {
+        let owner = await tool.iwan.callScFunc(iWanChainType, tokenAddress, "owner", [], ownerAbi);
+        if (!tool.compAddress(owner, expected)) { // maybe config origToken later
+          report("detail", "chain %s wrapped %s token %s owner not match: %s, expected %s", chainType, symbol, tokenAddress, owner, expected);
+        }
+      } catch (err) { // maybe node is temporarily unavailable
+        report("detail", "chain %s wrapped %s token %s owner unknown, expected %s", chainType, symbol, tokenAddress, expected);
       }
-    } catch (err) { // maybe node is temporarily unavailable
-      report("detail", "chain %s %s token %s owner unknown, expected %s", chainType, symbol, tokenAddress, expectedOwner);
+    } else { // nft
+      try {
+        let adminRole = "0x0000000000000000000000000000000000000000000000000000000000000000";
+        let isAdmin = await tool.iwan.callScFunc(iWanChainType, tokenAddress, "hasRole", [adminRole, expected], ownerAbi);
+        if (!isAdmin) {
+          report("detail", "chain %s wrapped %s token %s admin not match, expected %s", chainType, symbol, tokenAddress, expected);
+        }
+      } catch (err) { // maybe node is temporarily unavailable
+        report("detail", "chain %s wrapped %s token %s admin unknown, expected %s", chainType, symbol, tokenAddress, expected);
+      }
     }
   }
 }
@@ -200,10 +249,10 @@ async function validateToken(name, chainId, tokenAddress, symbol, decimals) {
 function report(type, ...msg) {
   let text = util.format(...msg);
   if (type === "error") {
-    console.log("\x1B[41m%s\x1B[0m", text);
+    console.log("\x1B[101m%s\x1B[0m", text);
     throw new Error(text);
   } else if (type === "detail") {
-    console.log("\x1B[41m%s\x1B[0m", text);
+    console.log("\x1B[101m%s\x1B[0m", text);
   } else if (type === "warn") {
     console.log("\x1B[43m%s\x1B[0m", text);
   }
