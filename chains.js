@@ -74,7 +74,7 @@ module.exports = {
   },
   XDC: { // XinFin
     bip44Id: 2147484198,
-    walletId: 250,
+    walletId: 50,
     admin: "0x4cEd9c0EA79Ee6181600777D5B6badE7F3D301bF",
     tokenManagerProxy: "0xc928c8e48647c8b0ce550c2352087b1cf5c6111e",
     gasPrice: 1000000000,
