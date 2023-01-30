@@ -15,7 +15,7 @@ module.exports = {
     gasPrice: 1000000000,
     gasLimit: 1000000,
   },
-  BSC: {
+  BSC: { // BSC(BNB)
     bip44Id: 2147484362,
     walletId: 56,
     admin: "0x4cEd9c0EA79Ee6181600777D5B6badE7F3D301bF",
@@ -53,15 +53,15 @@ module.exports = {
     walletId: 137,
     admin: "0x4cEd9c0EA79Ee6181600777D5B6badE7F3D301bF",
     tokenManagerProxy: "0xc928c8e48647c8b0ce550c2352087b1cf5c6111e",
-    gasPrice: 1000000000,
+    gasPrice: 100000000000, // 100 gwei
     gasLimit: 1000000,
   },
-  ARETH: {
+  ARB: { // Arbitrum(ARETH)
     bip44Id: 1073741826,
     walletId: 42161,
     admin: "0x4cEd9c0EA79Ee6181600777D5B6badE7F3D301bF",
     tokenManagerProxy: "0xc928c8e48647c8b0ce550c2352087b1cf5c6111e",
-    gasPrice: 1000000000,
+    gasPrice: 100000000, // 0.1 gwei
     gasLimit: 1000000,
   },
   FTM: {
@@ -110,5 +110,13 @@ module.exports = {
     walletId: "no",
     admin: "no",
     tokenManagerProxy: "no"
+  },
+  OPT: { // Optimism(OETH)
+    bip44Id: 2147484262,
+    walletId: 10,
+    admin: "",
+    tokenManagerProxy: "0x1eD3538383BBFDB80343B18F85D6c5A5Fb232fb6",
+    gasPrice: 1000000000,
+    gasLimit: 1000000,
   },
 };

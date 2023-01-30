@@ -16,7 +16,9 @@ const AddressNonceCache = new Map();
 let TxReportCache = false;
 
 const ChainTypeMapping = new Map([
-  ["BSC", "BNB"]
+  ["BSC", "BNB"],
+  ["ARB", "ARETH"],
+  ["OPT", "OETH"],
 ])
 
 console.log("total %d txs from file %s", txs.length, inputFile);
@@ -47,10 +49,14 @@ async function validate() {
       // check gas
       if (chainInfo.gasPrice) {
         if (Number(tx.gasPrice) < chainInfo.gasPrice) {
-          report("error", "invalid gasPrice: %s, at least %s", tx.gasPrice, chainInfo.gasPrice);
+          report("warn", "too low gasPrice: %s, at least %s", tx.gasPrice, chainInfo.gasPrice);
+        } else if (Number(tx.gasPrice) > (chainInfo.gasPrice * 50)) {
+          report("warn", "too high gasPrice: %s, at least %s", tx.gasPrice, chainInfo.gasPrice);
         }
         if (Number(tx.gasLimit) < chainInfo.gasLimit) {
-          report("error", "invalid gasLimit: %s, at least %s", tx.gasLimit, chainInfo.gasLimit);
+          report("warn", "too low gasLimit: %s, at least %s", tx.gasLimit, chainInfo.gasLimit);
+        } else if (Number(tx.gasLimit) > (chainInfo.gasLimit * 2)) {
+          report("warn", "too high gasLimit: %s, at least %s", tx.gasLimit, chainInfo.gasLimit);
         }
       } else if (tx.chain === "TRX") {
         if (Number(tx.feeLimit) < chainInfo.feeLimit) {
@@ -72,7 +78,7 @@ async function validate() {
         console.log("\x1B[42m%s\x1B[0m", "Pass");
       }
     } catch (err) {
-      // do nothing
+      report("detail", err);
     }
   }
   tool.iwan.close();
@@ -179,7 +185,7 @@ async function validateToken(name, ancestorChainId, chainId, tokenAddress, symbo
     return null;
   }
   if (tokenAddress == 0) {
-    if (name === "toAccount") {
+    if ((name === "toAccount") && ((ancestorChainId !== "2147483708") || (symbol !== "ETH"))) {
       report("detail", "invalid chain %s %s toAccount: %s", chainType, symbol, tokenAddress);
     }
     TokenInfoCache.set(key, null);
@@ -249,12 +255,12 @@ async function validateToken(name, ancestorChainId, chainId, tokenAddress, symbo
 function report(type, ...msg) {
   let text = util.format(...msg);
   if (type === "error") {
-    console.log("\x1B[101m%s\x1B[0m", text);
+    console.error("\x1B[101m%s\x1B[0m", text);
     throw new Error(text);
   } else if (type === "detail") {
-    console.log("\x1B[101m%s\x1B[0m", text);
+    console.error("\x1B[101m%s\x1B[0m", text);
   } else if (type === "warn") {
-    console.log("\x1B[43m%s\x1B[0m", text);
+    console.warn("\x1B[43m%s\x1B[0m", text);
   }
   TxReportCache = true;
 }
