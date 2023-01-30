@@ -81,6 +81,17 @@ async function validate() {
       report("detail", err);
     }
   }
+
+  TokenPairMap.forEach((info, id) => {
+    if (info.chains.length) {
+      info.chains.forEach(chain => {
+        let chainInfo = chains[chain];
+        let type = chainInfo.admin? "detail" : "warn";
+        report(type, "should config TokenPair %s on %s chain", id, chain);
+      });
+    }
+  })
+
   tool.iwan.close();
 }
 
@@ -115,7 +126,7 @@ function validateTrxRefBlock(rb) {
   }
   let now = new Date().getTime();
   if ((now < rb.timestamp) || (now - rb.timestamp > 28800)) {
-    report("warn", "need update refBlock");
+    report("warn", "should update refBlock");
   }
 }
 
@@ -129,8 +140,9 @@ async function validateAddTokenPair(tx) {
   let id = tx.params[0];
   let exist = TokenPairMap.get(id);
   if (exist) {
-    if (tx.params.toString() !== exist.toString()) {
-      report("detail", "-%s", exist.toString());
+    exist.chains = exist.chains.filter(v => v !== tx.chain);
+    if (tx.params.toString() !== exist.params.toString()) {
+      report("detail", "-%s", exist.params.toString());
       report("detail", "+%s", tx.params.toString());
       report("error", "tokenPair %s info not match", id);
     }
@@ -140,7 +152,13 @@ async function validateAddTokenPair(tx) {
     if ((fromChainId === toChainId) || ((![fromChainId, toChainId].includes(selfChainId)) && (tx.chain !== "WAN"))) {
       report("error", "invalid fromChainId(%s) or toChainId(%s)", fromChainId, toChainId);
     }
-    TokenPairMap.set(id, tx.params);
+    // chains to config
+    let fromChain = chainId2Type(fromChainId), toChain = chainId2Type(toChainId);
+    let chains2Cfg = [fromChain, toChain].filter(v => v && (v !== tx.chain));
+    if ((fromChain !== "WAN") && (toChain !== "WAN") && (tx.chain !== "WAN")) {
+      chains2Cfg.push("WAN");
+    }
+    TokenPairMap.set(id, {params: tx.params, chains: chains2Cfg});
     let [aAccount, aSymbol, aName, aDecimals, aBip44Id] = ancestor;
     // serial to prevent duplication
     let tis = [], type = "", decimals = undefined;
@@ -170,16 +188,10 @@ async function validateToken(name, ancestorChainId, chainId, tokenAddress, symbo
   if (exist !== undefined) {
     return exist;
   }
-  let chainType = null, chainInfo = null;
-  for (let chain in chains) {
-    let ci = chains[chain];
-    if (ci.bip44Id == chainId) {
-      chainType = chain;
-      chainInfo = ci;
-      break;
-    }
-  }
-  if (!chainType) {
+  let chainInfo = null, chainType = chainId2Type(chainId);
+  if (chainType) {
+    chainInfo = chains[chainType];
+  } else {
     report("detail", "%s validateToken invalid chainId: %s", name, chainId);
     TokenInfoCache.set(key, null);
     return null;
@@ -263,4 +275,14 @@ function report(type, ...msg) {
     console.warn("\x1B[43m%s\x1B[0m", text);
   }
   TxReportCache = true;
+}
+
+function chainId2Type(chainId) {
+  for (let chain in chains) {
+    let ci = chains[chain];
+    if (ci.bip44Id == chainId) {
+      return chain;
+    }
+  }
+  return null;
 }
