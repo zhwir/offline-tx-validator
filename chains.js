@@ -26,7 +26,6 @@ module.exports = {
   AVAX: {
     bip44Id: 2147492648,
     walletId: 43114,
-    bip44Id: 2153201998,
     admin: "0x4cEd9c0EA79Ee6181600777D5B6badE7F3D301bF",
     tokenManagerProxy: "0xf06d72375d3bf5ab1a8222858e2098b16e5e8355",
     gasPrice: 1000000000,
@@ -114,8 +113,16 @@ module.exports = {
   OPT: { // Optimism(OETH)
     bip44Id: 2147484262,
     walletId: 10,
-    admin: "",
+    admin: "0x4cEd9c0EA79Ee6181600777D5B6badE7F3D301bF",
     tokenManagerProxy: "0x1eD3538383BBFDB80343B18F85D6c5A5Fb232fb6",
+    gasPrice: 1000000000,
+    gasLimit: 1000000,
+  },
+  ASTR: { // Astar
+    bip44Id: 2147484458,
+    walletId: 592,
+    admin: "",
+    tokenManagerProxy: "0xd97de67b982d79ED9f7EB2b1A13abC704b2cA082",
     gasPrice: 1000000000,
     gasLimit: 1000000,
   },

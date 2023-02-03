@@ -119,7 +119,10 @@ async function validateToken(chainType, sc) {
       return {name, symbol, type: 'Erc721', decimals: 0};
     }
   } catch (err) {
-    // do nothing
+    let errStr = err.toString();
+    if (errStr.includes("unrecognizable parameter ChainType")) {
+      console.error("\x1B[101m%s\x1B[0m", errStr);
+    }
   }
 
   try { // validate Erc1155

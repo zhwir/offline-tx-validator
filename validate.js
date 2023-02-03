@@ -224,7 +224,7 @@ async function validateToken(name, ancestorChainId, chainId, tokenAddress, symbo
   TokenInfoCache.set(key, ti);
   // check symbol
   if (ti.symbol) {
-    if (!ti.symbol.includes(symbol)) {
+    if (!ti.symbol.toLowerCase().includes(symbol.toLowerCase())) {
       report("warn", "chain %s %s token %s symbol not match: %s, ancestor %s", chainType, symbol, tokenAddress, ti.symbol, symbol);
     }
   }
