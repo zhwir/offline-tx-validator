@@ -13,6 +13,7 @@ let TrxRefBlockCache = null;
 const TokenPairMap = new Map();
 const TokenInfoCache = new Map();
 const AddressNonceCache = new Map();
+const gasPriceCache = new Map();
 let TxReportCache = false;
 
 const ChainTypeMapping = new Map([
@@ -48,10 +49,20 @@ async function validate() {
       await validateNonce(tx.chain, tx.from, tx.nonce);
       // check gas
       if (chainInfo.gasPrice) {
-        if (Number(tx.gasPrice) < chainInfo.gasPrice) {
-          report("warn", "too low gasPrice: %s, at least %s", tx.gasPrice, chainInfo.gasPrice);
-        } else if (Number(tx.gasPrice) > (chainInfo.gasPrice * 50)) {
-          report("warn", "too high gasPrice: %s, at least %s", tx.gasPrice, chainInfo.gasPrice);
+        let gasPrice = gasPriceCache.get(tx.chain);
+        if (!gasPrice) {
+          let iWanChainType = ChainTypeMapping.get(tx.chain) || tx.chain;
+          gasPrice = await tool.getGasPrice(iWanChainType);
+          if (gasPrice) {
+            gasPriceCache.set(tx.chain, gasPrice);
+          } else {
+            gasPrice = chainInfo.gasPrice;
+          }
+        }
+        if (Number(tx.gasPrice) < gasPrice) {
+          report("warn", "too low gasPrice: %s, at least %s", tx.gasPrice, gasPrice);
+        } else if (Number(tx.gasPrice) > (gasPrice * 10)) {
+          report("warn", "too high gasPrice: %s, at least %s", tx.gasPrice, gasPrice);
         }
         if (Number(tx.gasLimit) < chainInfo.gasLimit) {
           report("warn", "too low gasLimit: %s, at least %s", tx.gasLimit, chainInfo.gasLimit);

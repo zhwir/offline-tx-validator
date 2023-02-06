@@ -115,7 +115,7 @@ module.exports = {
     walletId: 10,
     admin: "0x4cEd9c0EA79Ee6181600777D5B6badE7F3D301bF",
     tokenManagerProxy: "0x1eD3538383BBFDB80343B18F85D6c5A5Fb232fb6",
-    gasPrice: 1000000000,
+    gasPrice: 1000000, // 0.001 gwei
     gasLimit: 1000000,
   },
   ASTR: { // Astar

@@ -176,9 +176,18 @@ async function validateErc721(chainType, sc) {
   }
 }
 
+async function getGasPrice(chainType) {
+  try {
+    return iwan.getGasPrice(chainType);
+  } catch (err) {
+    return 0;
+  }
+}
+
 module.exports = {
   iwan,
   compAddress,
   parseTokenPairAccount,
-  validateToken
+  validateToken,
+  getGasPrice
 }
