@@ -154,7 +154,7 @@ async function validateAddTokenPair(tx) {
     }
     // chains to config
     let fromChain = chainId2Type(fromChainId), toChain = chainId2Type(toChainId);
-    let chains2Cfg = [fromChain, toChain].filter(v => v && (v !== tx.chain));
+    let chains2Cfg = [fromChain, toChain].filter(v => v && (v !== tx.chain) && (chains[v].tokenManagerProxy !== "no"));
     if ((fromChain !== "WAN") && (toChain !== "WAN") && (tx.chain !== "WAN")) {
       chains2Cfg.push("WAN");
     }
@@ -207,7 +207,8 @@ async function validateToken(name, ancestorChainId, chainId, tokenAddress, symbo
     let token = tool.parseTokenPairAccount(chainType, tokenAddress);
     let tokenAccount = token.join(".");
     if (chainType === "XRP") {
-      report("warn", "need manually validate %s token: %s => %s", chainType, tokenAccount, "https://livenet.xrpl.org/token/" + tokenAccount);
+      let rawTokenAccount = tool.parseTokenPairAccount(chainType, tokenAddress, false).join(".");
+      report("warn", "need manually validate %s token: %s => %s", chainType, tokenAccount, "https://livenet.xrpl.org/token/" + rawTokenAccount);
     } else {
       report("warn", "need manually validate %s token: %s", chainType, chainType);
     }
