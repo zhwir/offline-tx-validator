@@ -121,7 +121,7 @@ module.exports = {
   ASTR: { // Astar
     bip44Id: 2147484458,
     walletId: 592,
-    admin: "",
+    admin: "0x4ced9c0ea79ee6181600777d5b6bade7f3d301bf",
     tokenManagerProxy: "0xd97de67b982d79ED9f7EB2b1A13abC704b2cA082",
     gasPrice: 1000000000,
     gasLimit: 1000000,

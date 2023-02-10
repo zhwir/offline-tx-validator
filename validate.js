@@ -43,7 +43,7 @@ async function validate() {
       }
       // check from
       if (!tool.compAddress(tx.from, chainInfo.admin)) {
-        report("error", "invalid from: %s, expected %s", tx.from, chainInfo.admin);
+        report("detail", "invalid from: %s, expected %s", tx.from, chainInfo.admin);
       }
       // check nonce
       await validateNonce(tx.chain, tx.from, tx.nonce);
@@ -71,7 +71,7 @@ async function validate() {
         }
       } else if (tx.chain === "TRX") {
         if (Number(tx.feeLimit) < chainInfo.feeLimit) {
-          report("error", "invalid feeLimit: %s, at least %s", tx.feeLimit, chainInfo.feeLimit);
+          report("detail", "invalid feeLimit: %s, at least %s", tx.feeLimit, chainInfo.feeLimit);
         }
         validateTrxRefBlock(tx.refBlock);
       }
@@ -79,7 +79,7 @@ async function validate() {
       if (["addTokenPair", "updateTokenPair"].includes(tx.abi.name)) {
         // check to
         if (!tool.compAddress(tx.to, chainInfo.tokenManagerProxy)) {
-          report("error", "invalid to: %s, expected %s", tx.to, chainInfo.tokenManagerProxy);
+          report("detail", "invalid to: %s, expected %s", tx.to, chainInfo.tokenManagerProxy);
         }
         await validateAddTokenPair(tx);
       } else {
@@ -130,7 +130,7 @@ async function validateNonce(chainType, address, nonce) {
 function validateTrxRefBlock(rb) {
   if (TrxRefBlockCache) {
     if ((TrxRefBlockCache.number === rb.number) && (TrxRefBlockCache.hash === rb.hash) && (TrxRefBlockCache.timestamp === rb.timestamp)) {
-      report("error", "refBlock not match");
+      report("detail", "refBlock not match");
     }
   } else {
     TrxRefBlockCache = rb;
