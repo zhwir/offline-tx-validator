@@ -1,4 +1,10 @@
 module.exports = {
+  BTC: {
+    bip44Id: 2147483648,
+    walletId: "no",
+    admin: "no",
+    tokenManagerProxy: "no"
+  },
   WAN: {
     bip44Id: 2153201998,
     walletId: 1,
