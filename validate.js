@@ -257,7 +257,7 @@ async function validateToken(name, ancestorChainId, chainId, tokenAddress, symbo
       try {
         let owner = await tool.iwan.callScFunc(iWanChainType, tokenAddress, "owner", [], ownerAbi);
         if (!tool.compAddress(owner, expected)) { // maybe config origToken later
-          report("detail", "chain %s wrapped %s token %s owner not match: %s, expected %s", chainType, symbol, tokenAddress, owner, expected);
+          report("detail", "chain %s %s(%s) is wrapped token? owner is %s, expected %s", chainType, symbol, tokenAddress, owner, expected);
         }
       } catch (err) { // maybe node is temporarily unavailable
         report("detail", "chain %s wrapped %s token %s owner unknown, expected %s", chainType, symbol, tokenAddress, expected);

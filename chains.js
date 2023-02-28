@@ -5,6 +5,18 @@ module.exports = {
     admin: "no",
     tokenManagerProxy: "no"
   },
+  DOGE: {
+    bip44Id: 2147483651,
+    walletId: "no",
+    admin: "no",
+    tokenManagerProxy: "no"
+  },
+  DOT: {
+    bip44Id: 2147484002,
+    walletId: "no",
+    admin: "no",
+    tokenManagerProxy: "no"
+  },
   WAN: {
     bip44Id: 2153201998,
     walletId: 1,
@@ -130,6 +142,14 @@ module.exports = {
     admin: "0x4ced9c0ea79ee6181600777d5b6bade7f3d301bf",
     tokenManagerProxy: "0xd97de67b982d79ED9f7EB2b1A13abC704b2cA082",
     gasPrice: 1000000000,
+    gasLimit: 1000000,
+  },
+  TLOS: { // Astar
+    bip44Id: 2147484625,
+    walletId: 40,
+    admin: "0x4ced9c0ea79ee6181600777d5b6bade7f3d301bf",
+    tokenManagerProxy: "0x4a9F99ceb037E8C4FBEC272D17D40282aA67d9c6",
+    gasPrice: 500000000000,
     gasLimit: 1000000,
   },
 };
